@@ -1,0 +1,4 @@
+snakebids
+pydicom 
+glob2
+./workflow/scripts/pybruker

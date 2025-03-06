@@ -22,26 +22,26 @@ wildcard_constraints:
 #to motion-correct, use the scanner-provided UNI images 
 
 def get_uni_mp2rage_niftis(wildcards,input):
-    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
+    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_ISO100*.nii'))
     return niftis
 
 def get_corr_uni_mp2rage_niftis(wildcards,input,output):
-    in_niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
+    in_niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_ISO100*.nii'))
     out_niftis = [ Path(output.nii_folder) / Path(nii).name for nii in in_niftis ] 
     return out_niftis
 
 
 def get_uni_mp2rage_jsons(wildcards,input):
-    jsons = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.json'))
+    jsons = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_ISO100*.json'))
     return jsons
 
 
 def get_flo_indices(wildcards,input):
-    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
+    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_ISO100*.nii'))
     return " ".join([f"{i}" for i in range(1, len(niftis))])
 
 def get_flo_imgs(wildcards,input):
-    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_3D_ISO250*.nii'))
+    niftis = sorted(glob( input.nii_folder + f'/*2_cfmmMP2RAGE_ISO100*.nii'))
     return " ".join(niftis[1:])
 
 """
@@ -51,13 +51,13 @@ rule fixorient_uni:
     params:
         in_unis=get_uni_mp2rage_niftis,
         out_unis=get_corr_uni_mp2rage_niftis,
-        ref_nii=lambda wildcards, input: sorted(glob(input.nii_folder + f'/*cfmmMP2RAGE_3D_ISO250_01.nii'))[0]
+        ref_nii=lambda wildcards, input: sorted(glob(input.nii_folder + f'/*cfmmMP2RAGE_ISO100_01.nii'))[0]
     output: 
         nii_folder=directory('niftis_corrorient/sub-{subject}')
     run:
         shell('mkdir -p {output.nii_folder}')
         for in_uni,out_uni in zip(params.in_unis,params.out_unis):
-            shell('c3d {in_uni} -swapdim LSA -popas SWAPPED {params.ref_nii} -push SWAPPED -copy-transform -o {out_uni}') 
+            shell('{c3d} {in_uni} -swapdim LSA -popas SWAPPED {params.ref_nii} -push SWAPPED -copy-transform -o {out_uni}') 
 """
 
 rule moco_uni:
@@ -111,21 +111,34 @@ rule moco_uni:
             ::: {params.flo_imgs}
              
         mkdir -p {output.affine_dir}
-        cp affine_xfm_ras_*.txt {output.affine_dir}
-        echo -e '1 0 0 0
-                 0 1 0 0
-                 0 0 1 0
-                 0 0 0 1' |
-            dedent > {output.affine_dir}/affine_xfm_ras_000.txt
-        mrcat {params.UNIs[0]} warped_*.nii {output.nii_4d}
-        mrmath {output.nii_4d} mean {output.nii_avg3d} -axis 3
+        if [ -z "{params.flo_indices}" ]; then # If no moving volumes, skip motion correction
+            echo "Only one volume found. Skipping motion correction."
+            # Create dummy transform (identity matrix)
+            echo -e '1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1' > {output.affine_dir}/affine_xfm_ras_000.txt
+            # Copy the single volume as the 4D and 3D outputs
+            cp {params.UNIs[0]} {output.nii_4d}
+            cp {params.UNIs[0]} {output.nii_avg3d}
+        else
+            # Run motion correction for multiple volumes
+            parallel --eta --jobs {threads} --link \\
+                reg_aladin -flo {{2}} -ref {params.UNIs[0]} -res warped_{{1}}.nii \\
+                    -aff affine_xfm_ras_{{1}}.txt --rigOnly \\
+                ::: {params.flo_indices} \\
+                ::: {params.flo_imgs}
+            cp affine_xfm_ras_*.txt {output.affine_dir}
+            mrcat {params.UNIs[0]} warped_*.nii {output.nii_4d}
+            mrmath {output.nii_4d} mean {output.nii_avg3d} -axis 3
+        fi
         """ 
 
 
 def get_avg_mp2rage_cmd(wildcards,input,output):
-    niftis = sorted(glob( input.nii_folder + f'/*cfmmMP2RAGE_3D_ISO250*{wildcards.part}*.nii'))
+    niftis = sorted(glob( input.nii_folder + f'/*cfmmMP2RAGE_ISO100*{wildcards.part}*.nii'))
     xfms = sorted(glob( input.affine_dir + f'/affine_xfm_ras_*.txt'))
     cmds = []
+
+    print({f'/*cfmmMP2RAGE_ISO100*{wildcards.part}*.nii'})
+    print(input.nii_folder)
 
     #create upsampled ref
 #    cmds.append(f'c4d {niftis[0]} -resample 200x200x200x100% ref_upsampled.nii.gz && ')
@@ -139,7 +152,7 @@ def get_avg_mp2rage_cmd(wildcards,input,output):
         cmds.append(f'reg_resample -ref {ref} -flo {flo} -res resampled_{i}.nii.gz -aff {xfm} && ')
 
     #average images
-    cmds.append('c4d resampled_*.nii.gz')
+    cmds.append(f'{c4d} resampled_*.nii.gz')
     for i in range(len(niftis)-1):
         cmds.append('-add')
     cmds.append(f'-scale {1.0/len(niftis)}')
@@ -178,8 +191,8 @@ rule split_inversions:
         inv1=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='1',suffix='MP2RAGEchannels.nii.gz'),
         inv2=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='{part}',inv='2',suffix='MP2RAGEchannels.nii.gz')
     shell:
-        'c4d {input} -slice w {params.vols_inv1} -tile w -o {output.inv1} && '
-        'c4d {input} -slice w {params.vols_inv2} -tile w -o {output.inv2} '
+        '{c4d} {input} -slice w {params.vols_inv1} -tile w -o {output.inv1} && '
+        '{c4d} {input} -slice w {params.vols_inv2} -tile w -o {output.inv2} '
 
  
        
@@ -193,7 +206,7 @@ rule mp2rage_numerator_denominator:
         numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNInumeratorchannels.nii.gz'),
         denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',suffix='UNIdenominatorchannels.nii.gz'),
     shell:
-        'c4d {input.re_inv1} {input.re_inv2} -multiply '
+        '{c4d} {input.re_inv1} {input.re_inv2} -multiply '
         ' {input.im_inv1} {input.im_inv2} -multiply '
         ' -add -as NUMERATOR -o {output.numerator} '
         ' {input.re_inv1} -dup -multiply '
@@ -213,8 +226,8 @@ rule mp2rage_add_bias_term:
         numerator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNInumeratorchannels.nii.gz'),
         denominator=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',beta='{beta}',suffix='UNIdenominatorchannels.nii.gz'),
     shell:
-        'c4d {input.numerator} {params.num_offset} -o {output.numerator} && '
-        'c4d {input.denominator} {params.den_offset} -o {output.denominator} '
+        '{c4d} {input.numerator} {params.num_offset} -o {output.numerator} && '
+        '{c4d} {input.denominator} {params.den_offset} -o {output.denominator} '
 
 rule mp2rage_division_uniden:
     input:
@@ -241,7 +254,7 @@ def get_sos_combine_cmd(wildcards,input,output):
     cmds=[]
     cmds.append(f'fslsplit {input} channels_ -t')
     cmds.append('&&')
-    cmds.append(f'c3d channels_*.nii.gz ')
+    cmds.append(f'{c3d} channels_*.nii.gz ')
     for i in range(n_channels):
         cmds.append(f'-dup -multiply -popas S{i}') #square it, add to stack
 
@@ -300,8 +313,8 @@ rule real_imag_to_phase_mag:
         mag=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='mag',inv='{inv}',suffix='MP2RAGE.nii.gz'),
         phase=bids(root='work',subject='{subject}',acq='mp2rage',datatype='anat',part='phase',inv='{inv}',suffix='MP2RAGE.nii.gz'),
     shell:
-        'c3d {input.imag} {input.real} -atan2 -o {output.phase} && '
-        'c3d {input.imag}  -dup -multiply -popas IMAG_SQUARED {input.real} -dup -multiply -popas REAL_SQUARED -push IMAG_SQUARED -push REAL_SQUARED -add -sqrt -o {output.mag}'
+        '{c3d} {input.imag} {input.real} -atan2 -o {output.phase} && '
+        '{c3d} {input.imag}  -dup -multiply -popas IMAG_SQUARED {input.real} -dup -multiply -popas REAL_SQUARED -push IMAG_SQUARED -push REAL_SQUARED -add -sqrt -o {output.mag}'
 
 
 rule get_bruker_params:
@@ -334,7 +347,7 @@ rule fixorient_uni:
             subject='{subject}'
         ),
     shell:
-        'c3d {input.uni} -swapdim LSA -popas SWAPPED {input.ref} -push SWAPPED -copy-transform -o {output}'
+        '{c3d} {input.uni} -swapdim LSA -popas SWAPPED {input.ref} -push SWAPPED -copy-transform -o {output}'
 
 
 rule cp_uni_to_bids:

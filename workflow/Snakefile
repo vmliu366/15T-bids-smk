@@ -1,23 +1,26 @@
 from glob import glob
 from snakebids import bids
+# from snakebids import set_bids_spec
 
 configfile: 'config.yml'
+# set_bids_spec("v0_11_0")
+c4d='/home/mliu366/scratch/1_in_progress/workflows/15T-bids-smk/resources/c3d/c3d-1.2.0-Linux-x86_64/bin/c4d'
+c3d='/home/mliu366/scratch/1_in_progress/workflows/15T-bids-smk/resources/c3d/c3d-1.2.0-Linux-x86_64/bin/c3d'
 
-  
 rule all:
     input:
         niftis=expand('niftis/sub-{subject}',subject=config['tarfiles'].keys()),
         uni=expand(bids(root='bids',subject='{subject}',acq='mp2rage',datatype='anat',suffix='T1w.nii.gz'),
                 subject=config['tarfiles'].keys()),
-        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.{ext}'),
-                subject=config['tarfiles'].keys(),
-                acq=['multishell','revb0'],
-                ext=['nii.gz','bval','bvec','json']
-            ),
-        mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.nii.gz'),
-                subject=config['tarfiles'].keys(),
-                acq=['MTw','PDw','T1w'],
-            ),
+#        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.{ext}'),
+#                subject=config['tarfiles'].keys(),
+#                acq=['multishell','revb0'],
+#                ext=['nii.gz','bval','bvec','json']
+#            ),
+#        mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.nii.gz'),
+#                subject=config['tarfiles'].keys(),
+#                acq=['MTw','PDw','T1w'],
+#            ),
 
         dd='bids/dataset_description.json'
     
@@ -60,6 +63,10 @@ rule cp_extra_bids:
         'cp {input.dd} {output.dd} && '
         'cp {input.ignore} {output.ignore}'
 
-include: 'rules/mp2rage.smk'
-include: 'rules/dwi.smk'
-include: 'rules/mtsat.smk'
+
+if "mp2rage" in config["modules"]:
+    include: "rules/mp2rage.smk"
+if "dwi" in config["modules"]:
+    include: "rules/dwi.smk"
+if "mtsat" in config["modules"]:
+    include: "rules/mtsat.smk"

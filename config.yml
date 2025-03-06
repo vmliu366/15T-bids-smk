@@ -1,9 +1,11 @@
+# Default values (can be overridden via CLI)
+
 tarfiles: 
-  betty: tarfiles/Everling_Marmoset_20230718_Betty_20230718_01.484D54A4.tar
+  T20: /home/mliu366/scratch/1_in_progress/histo2mri/exvivo_15T/T20.tar
 
-n_channels: 8 #for complex coil data
-
+n_channels: 2 #for complex coil data
 
 #for mp2rage denoising
 beta: 20000
 
+modules: ["mp2rage", 'dwi', 'mtsat']
