@@ -1,11 +1,15 @@
 # Default values (can be overridden via CLI)
-
+input_dir: null #user input expected 
+output_dir: ./output
 tarfiles: 
   T20: /home/mliu366/scratch/1_in_progress/histo2mri/exvivo_15T/T20.tar
+modules: ['mp2rage']
 
-n_channels: 2 #for complex coil data
+# paths (TO DO: better way of resolving this?)
+c4d: '/home/mliu366/scratch/1_in_progress/workflows/15T-bids-smk/resources/c3d/c3d-1.2.0-Linux-x86_64/bin/c4d'
+c3d: '/home/mliu366/scratch/1_in_progress/workflows/15T-bids-smk/resources/c3d/c3d-1.2.0-Linux-x86_64/bin/c3d'
 
 #for mp2rage denoising
 beta: 20000
 
-modules: ["mp2rage", 'dwi', 'mtsat']
+modules: ["mp2rage"]
