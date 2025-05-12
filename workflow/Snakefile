@@ -1,9 +1,3 @@
-# TODO:
-#  - [ ] T1-FLASH processing 
-#        [ ] get FLASH images, convert to BIDS format 
-#        [ ] extract json info from scanner 
-#        [ ] perform N4BiasFieldCorrection 
-
 from glob import glob
 from snakebids import bids
 import os 
@@ -13,9 +7,9 @@ from snakebids import set_bids_spec
 set_bids_spec("v0_11_0")
 
 configfile: 'config.yml'
-config.setdefault('output_dir', './output')
-c3d = config["c3d"]
-c4d = config["c4d"]
+#config.setdefault('output_dir', './output')
+#c3d = config["c3d"]
+#c4d = config["c4d"]
 
 if not config['input_dir']:
     raise ValueError("Please provide --config input_dir=/path/to/tar/")
@@ -31,18 +25,31 @@ def out_path(path):
 rule all:
     input:
         niftis=expand(out_path('niftis/sub-{subject}'),subject=config['tarfiles'].keys()),
-        uni=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.nii.gz'),
-                subject=config['tarfiles'].keys()),
-        uniden=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI-DEN',suffix='T1w',extension='.nii.gz'),
-                subject=config['tarfiles'].keys()),
-        method_jsons=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.json'),
-                subject=config['tarfiles'].keys()
-        ),
-#        dwi=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='dwi',suffix='dwi.{ext}'),
-#                subject=config['tarfiles'].keys(),
-#                acq=['multishell','revb0'],
-#                ext=['nii.gz','bval','bvec','json']
-#            ),
+
+        flash_nii=expand(bids(
+            root=out_path("bids"),
+            subject='{subject}',
+            datatype='anat',
+            acq='3DFLASH',
+            suffix='T1w',
+            extension='.nii.gz'),
+            subject=config['tarfiles'].keys()),
+        flash_jsons=expand(bids(
+            root=out_path('bids'),
+            subject='{subject}',
+            datatype='anat',
+            acq='3DFLASH',
+            suffix='T1w',
+            extension='.json'),
+            subject=config['tarfiles'].keys()),
+
+        # uni=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.nii.gz'),
+        #         subject=config['tarfiles'].keys()),
+        # uniden=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI-DEN',suffix='T1w',extension='.nii.gz'),
+        #         subject=config['tarfiles'].keys()),
+        # method_jsons=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.json'),
+        #         subject=config['tarfiles'].keys()
+        # ),
 
 #        mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.{ext}'),
 #                subject=config['tarfiles'].keys(),
@@ -85,11 +92,10 @@ rule cp_extra_bids:
         dd='resources/dataset_description.json',
         ignore='resources/bidsignore'
     output:
-        dd=directory(out_path('bids/dataset_description.json')),
-        ignore=directory(out_path('bids/.bidsignore'))
+        dd=out_path('bids/dataset_description.json'),
+        ignore=out_path('bids/.bidsignore')
     shell:
-        "mkdir -p {output.dd}/.. && " #chain commands 'logical AND'
-        'cp {input.dd} {output.dd} && ' 
+        'cp {input.dd} {output.dd} && '
         'cp {input.ignore} {output.ignore}'
 
 for module in config['modules']:

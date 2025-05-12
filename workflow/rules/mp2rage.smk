@@ -119,10 +119,10 @@ rule reorient_to_ras:
         )
     shell:
         """
-        {c3d} {input.uni} -orient ALS -o {output.bids_uni} 
-        {c3d} {input.inv1} -orient ARS -o {output.bids_inv1}
+        c3d {input.uni} -orient ALS -o {output.bids_uni} 
+        c3d {input.inv1} -orient ARS -o {output.bids_inv1}
         fslswapdim {output.bids_inv1} z x y {output.bids_inv1}
-        {c3d} {input.inv2} -orient ARS -o {output.bids_inv2}
+        c3d {input.inv2} -orient ARS -o {output.bids_inv2}
         fslswapdim {output.bids_inv2} z x y {output.bids_inv2}
         """
 
