@@ -43,20 +43,52 @@ rule all:
             extension='.json'),
             subject=config['tarfiles'].keys()),
 
-        # uni=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.nii.gz'),
-        #         subject=config['tarfiles'].keys()),
-        # uniden=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI-DEN',suffix='T1w',extension='.nii.gz'),
-        #         subject=config['tarfiles'].keys()),
-        # method_jsons=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI',suffix='T1w',extension='.json'),
-        #         subject=config['tarfiles'].keys()
-        # ),
-
-#        mtsat=expand(bids(root='bids',subject='{subject}',acq='{acq}',datatype='anat',suffix='MTsat.{ext}'),
-#                subject=config['tarfiles'].keys(),
-#                acq=['MTw_mt-on', 'MTw_mt-off'],
-#                ext=['nii.gz', 'json']
-#            ),
-
+        uni_nii=expand(bids(
+            root=out_path("bids"),
+            subject="{subject}",
+            datatype="anat",
+            acq="mp2rage",
+            inv="1",
+            suffix="MP2RAGE",
+            extension=".nii.gz"),
+            subject=config['tarfiles'].keys()),
+        inv1_nii=expand(bids(
+            root=out_path("bids"),
+            subject="{subject}",
+            datatype="anat",
+            acq="mp2rage",
+            inv="2",
+            suffix="MP2RAGE",
+            extension=".nii.gz"),
+            subject=config['tarfiles'].keys()),
+        inv2_nii=expand(bids(
+            root=out_path("bids"),
+            subject='{subject}',
+            datatype='anat',
+            acq='mp2rage',
+            desc='UNI',
+            suffix='T1w',
+            extension='.nii.gz'),
+            subject=config['tarfiles'].keys()),
+        method_jsons=expand(bids(
+            root=out_path('bids'),
+            subject='{subject}',
+            datatype='anat',
+            acq='mp2rage',
+            desc='UNI',
+            suffix='T1w',
+            extension='.json'),
+            subject=config['tarfiles'].keys()),
+        
+        mt_nii=expand(bids(root=out_path('bids'),
+                subject='{subject}',
+                acq='{acq}',
+                datatype='anat',
+                suffix='MTsat.{ext}'),
+                subject=config['tarfiles'].keys(),
+                acq=['T1w', 'PDw', 'MTw'],
+                ext=['nii.gz', 'json']
+           ),
         dd=out_path('bids/dataset_description.json')
     
 rule all_mp2rage:
