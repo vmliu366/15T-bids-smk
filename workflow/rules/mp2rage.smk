@@ -120,12 +120,14 @@ rule reorient_to_ras:
         c3d {input.uni} -orient RIA -o {output.bids_uni} 
         fslswapdim {output.bids_uni}  x z -y {output.bids_uni}
         c3d {input.inv1} -orient LAS -o {output.bids_inv1}
-        fslswapdim {output.bids_inv1}  x z -y {output.bids_inv1}
+        fslcpgeom {output.bids_inv1} {output.bids_uni}
+        fslswapdim {output.bids_inv1}  -x y z {output.bids_inv1}
         c3d {input.inv2} -orient LAS -o {output.bids_inv2}
-        fslswapdim {output.bids_inv2} x z -y {output.bids_inv2}
+        fslcpgeom {output.bids_inv2} {output.bids_uni}
+        fslswapdim {output.bids_inv2}  -x y z {output.bids_inv2}
         """
 
-rule get_bruker_params:
+rule get_bruker_params_inversions:
     input:
         nii_folder=lambda wc: checkpoints.dcm_to_nii.get(subject=wc.subject).output[0],
         dcm_folder=lambda wc: checkpoints.extract_tar.get(subject=wc.subject).output[0],
@@ -134,13 +136,31 @@ rule get_bruker_params:
     params:
         jsons = get_uni_mp2rage_jsons
     output:
-        method_json=bids(
+        uni_json=bids(
             root=out_path('bids'),
             subject='{subject}',
             datatype='anat',
             acq='mp2rage',
             desc='UNI',
             suffix='T1w',
+            extension='.json'
+        ),
+        inv1_json=bids(
+            root=out_path('bids'),
+            subject='{subject}',
+            datatype='anat',
+            acq='mp2rage',
+            inv='1',
+            suffix='MP2RAGE',
+            extension='.json'
+        ),
+        inv2_json=bids(
+            root=out_path('bids'),
+            subject='{subject}',
+            datatype='anat',
+            acq='mp2rage',
+            inv='2',
+            suffix='MP2RAGE',
             extension='.json'
         )
     script:

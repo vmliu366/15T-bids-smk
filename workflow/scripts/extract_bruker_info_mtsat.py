@@ -29,9 +29,5 @@ method = jcamp.jcamp_parse(
 )
 print(metadata)
 
-#visu_pars = jcamp.jcamp_parse(
-#    H[0x0177, 0x1101].value.decode('utf-8').splitlines()
-#)
-
 with open(snakemake.output.method_json, 'w') as fp:
     json.dump(method,  fp, indent=4)

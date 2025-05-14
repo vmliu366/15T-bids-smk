@@ -40,6 +40,28 @@ print(metadata)
 #    H[0x0177, 0x1101].value.decode('utf-8').splitlines()
 #)
 
-with open(snakemake.output.method_json, 'w') as fp:
-    json.dump(method,  fp, indent=4)
+with open(snakemake.output.uni_json, 'w') as fp:
+    json.dump(metadata,  fp, indent=4)
 
+
+# generate inv1 and inv2 specific jsons
+
+# Create a copy for inv1 and inv2
+metadata_inv1 = metadata.copy()
+metadata_inv2 = metadata.copy()
+
+# Remove the general FlipAngle key (if present)
+metadata_inv1.pop('FlipAngle', None)
+metadata_inv1.pop('FlipAngle2', None)
+metadata_inv1.pop('InversionTime2', None)
+
+metadata_inv2.pop('FlipAngle', None)
+metadata_inv2.pop('FlipAngle1', None)
+metadata_inv2.pop('InversionTime1', None)
+
+with open(snakemake.output.inv1_json, 'w') as fp:
+    json.dump(metadata_inv1, fp, indent=4)
+
+# Save inv2 JSON
+with open(snakemake.output.inv2_json, 'w') as fp:
+    json.dump(metadata_inv2, fp, indent=4)

@@ -26,81 +26,56 @@ rule all:
     input:
         niftis=expand(out_path('niftis/sub-{subject}'),subject=config['tarfiles'].keys()),
 
-        flash_nii=expand(bids(
+        flash_bids=expand(bids(
             root=out_path("bids"),
             subject='{subject}',
             datatype='anat',
             acq='3DFLASH',
             suffix='T1w',
-            extension='.nii.gz'),
-            subject=config['tarfiles'].keys()),
-        flash_jsons=expand(bids(
-            root=out_path('bids'),
-            subject='{subject}',
-            datatype='anat',
-            acq='3DFLASH',
-            suffix='T1w',
-            extension='.json'),
-            subject=config['tarfiles'].keys()),
+            extension="{ext}"),
+            subject=config['tarfiles'].keys(),
+            ext=['.nii.gz','.json']),
 
-        uni_nii=expand(bids(
+        inv_bids=expand(bids(
             root=out_path("bids"),
             subject="{subject}",
             datatype="anat",
             acq="mp2rage",
-            inv="1",
+            inv="{inversions}",
             suffix="MP2RAGE",
-            extension=".nii.gz"),
-            subject=config['tarfiles'].keys()),
-        inv1_nii=expand(bids(
-            root=out_path("bids"),
-            subject="{subject}",
-            datatype="anat",
-            acq="mp2rage",
-            inv="2",
-            suffix="MP2RAGE",
-            extension=".nii.gz"),
-            subject=config['tarfiles'].keys()),
-        inv2_nii=expand(bids(
+            extension="{ext}"),
+            subject=config['tarfiles'].keys(),
+            inversions=['1','2'],
+            ext=['.nii.gz', '.json']),
+        uni_bids=expand(bids(
             root=out_path("bids"),
             subject='{subject}',
             datatype='anat',
             acq='mp2rage',
             desc='UNI',
             suffix='T1w',
-            extension='.nii.gz'),
-            subject=config['tarfiles'].keys()),
-        method_jsons=expand(bids(
-            root=out_path('bids'),
-            subject='{subject}',
-            datatype='anat',
-            acq='mp2rage',
-            desc='UNI',
-            suffix='T1w',
-            extension='.json'),
-            subject=config['tarfiles'].keys()),
-        
-        mt_nii=expand(bids(root=out_path('bids'),
+            extension='{ext}'),
+            subject=config['tarfiles'].keys(),
+            ext=['.nii.gz', '.json']),
+
+        mt_bids=expand(bids(root=out_path('bids'),
                 subject='{subject}',
                 acq='{acq}',
                 datatype='anat',
-                suffix='MTsat.{ext}'),
+                suffix='MTsat',
+                extension='{ext}'),
                 subject=config['tarfiles'].keys(),
                 acq=['T1w', 'PDw', 'MTw'],
-                ext=['nii.gz', 'json']
-           ),
-        dd=out_path('bids/dataset_description.json')
-    
-rule all_mp2rage:
-   input:
-         uni=expand(bids(root=out_path('bids'),subject='{subject}',acq='mp2rage',datatype='anat',desc='UNI-DEN',suffix='T1w.nii.gz'),
-                subject=config['tarfiles'].keys()),
-         invs=expand(bids(root=out_path('work'),subject='{subject}',acq='mp2rage',datatype='anat',inv='{inv}',suffix='MP2RAGE.nii.gz'),
+                ext=['.nii.gz', '.json']),
+        mtr_bids=expand(bids(root=out_path('derivatives'),
+                subject='{subject}',
+                desc='QUIT',
+                acq='3DGRE',
+                suffix='MTRmap',
+                extension='{ext}'),
                 subject=config['tarfiles'].keys(),
-#                part=['mag','phase'],
-                inv=[1,2]
-                ),
-      
+                ext=['.nii.gz','.json']),
+        dd=out_path('bids/dataset_description.json')
 
 checkpoint extract_tar:
     input:
@@ -118,8 +93,7 @@ checkpoint dcm_to_nii:
     shell:
         "mkdir -p {output} && dcm2niix -f '%s_%d' -o {output} -d 9 {input}"
 
-
-rule cp_extra_bids:
+rule clean_extra_bids:
     input:
         dd='resources/dataset_description.json',
         ignore='resources/bidsignore'

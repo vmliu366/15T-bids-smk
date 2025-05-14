@@ -3,7 +3,7 @@ input_dir: /home/UWO/mliu366/1_in_progress/15T_test #user input expected
 output_dir: /home/UWO/mliu366/1_in_progress/15T_test
 tarfiles: 
   T12: /home/UWO/mliu366/1_in_progress/15T_test/T12.tar
-modules: ['mtsat']
+modules: ['mtsat','flash','mp2rage']
 
 # graham-specfiic path
 #c4d: '/home/mliu366/scratch/1_in_progress/workflows/15T-bids-smk/resources/c3d/c3d-1.2.0-Linux-x86_64/bin/c4d'

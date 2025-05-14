@@ -1,9 +1,3 @@
-# grabs T1FLASH image
-# TODO:
-#  - [x] grab
-#  - [] reorient
-#  - [] rename 
-
 # ==================================================================================
 # Input Handling Functions
 # ==================================================================================
@@ -31,10 +25,11 @@ def get_flash_jsons(wildcards):
 # Core Processing Rules
 # ==================================================================================
 
-rule reorient_to_ras:
+rule flash_reorient_to_ras:
     """Reorient all images to RAS+ space"""
     input:
-        flash = lambda wc: get_flash_images(wc)["flash"]
+        flash = lambda wc: get_flash_images(wc)["flash"],
+        _nifti_dir=lambda wc: checkpoints.dcm_to_nii.get(subject=wc.subject).output[0]
     output:
         bids_flash = bids(
             root=out_path("bids"),
@@ -50,7 +45,7 @@ rule reorient_to_ras:
         fslswapdim {output.bids_flash}  x z -y {output.bids_flash} 
         """
 
-rule get_bruker_params:
+rule get_bruker_flash_jsons:
     input:
         nii_folder=lambda wc: checkpoints.dcm_to_nii.get(subject=wc.subject).output[0],
         dcm_folder=lambda wc: checkpoints.extract_tar.get(subject=wc.subject).output[0],
